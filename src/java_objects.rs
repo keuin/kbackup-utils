@@ -109,9 +109,9 @@ impl<K, V> From<HashMap<K, V>> for JavaHashMap<K, V> {
     }
 }
 
-impl<K, V> Into<HashMap<K, V>> for JavaHashMap<K, V> {
-    fn into(self) -> HashMap<K, V> {
-        self.0
+impl<K, V> AsRef<HashMap<K, V>> for JavaHashMap<K, V> {
+    fn as_ref(&self) -> &HashMap<K, V> {
+        &self.0
     }
 }
 
