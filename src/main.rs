@@ -44,8 +44,8 @@ enum Commands {
     VerifyKbi {
         #[arg(help = "path to the incremental backup directory")]
         repo_path: String,
-        #[arg(help = "path to the .kbi file")]
-        kbi_path: String,
+        #[arg(help = "path to the .kbi file", trailing_var_arg = true)]
+        kbi_path: Vec<String>,
     },
     #[command(about = "archive old incremental backups")]
     Archive {
