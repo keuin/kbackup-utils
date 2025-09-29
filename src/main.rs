@@ -1,8 +1,12 @@
+use std::thread;
+
 use crate::dump_kbi::dump_kbi;
 use crate::kbi_verification::verify_kbi;
 use crate::repo_verification::verify_incremental_store;
 use clap::{Parser, Subcommand};
+use signal_hook::{consts::SIGPIPE, iterator::Signals, low_level::exit};
 
+mod archive;
 mod dump_kbi;
 mod java_objects;
 mod kbi_verification;
@@ -43,10 +47,38 @@ enum Commands {
         #[arg(help = "path to the .kbi file")]
         kbi_path: String,
     },
+    #[command(about = "archive old incremental backups")]
+    Archive {
+        #[arg(help = "path to the incremental backup directory")]
+        kbi_repo: String,
+        #[arg(help = "path to the backups folder")]
+        backups: String,
+        #[arg(help = "path to the archived incremental backup directory")]
+        archive_kbi_repo: String,
+        #[arg(help = "path to the archived backups folder")]
+        archive_backups: String,
+        #[arg(help = "maximum live time of files before being archived")]
+        ttl: String,
+        #[clap(
+            long,
+            short,
+            help = "do not move any file, just print those actions",
+            default_value = "false"
+        )]
+        dry_run: bool,
+    },
 }
 
 fn main() {
     tracing_subscriber::fmt::init();
+
+    let mut sigpipe = Signals::new([SIGPIPE]).expect("error creating signal handler");
+    thread::spawn(move || {
+        for _ in sigpipe.forever() {
+            exit(0);
+        }
+    });
+
     let cli = CliArgs::parse();
     match cli.command {
         Commands::VerifyBackupRepo { path, threads } => {
@@ -60,6 +92,23 @@ fn main() {
             repo_path,
         } => {
             verify_kbi(kbi_path, repo_path);
+        }
+        Commands::Archive {
+            kbi_repo,
+            backups,
+            archive_kbi_repo,
+            archive_backups,
+            ttl,
+            dry_run,
+        } => {
+            archive::archive_backups(
+                kbi_repo,
+                backups,
+                archive_kbi_repo,
+                archive_backups,
+                ttl,
+                dry_run,
+            );
         }
     }
 }

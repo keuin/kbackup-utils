@@ -22,6 +22,22 @@ pub fn verify_kbi(kbi_path: String, repo_path: String) {
     verify_files(0, recv, 0);
 }
 
+pub fn collect_kbi_objects(kbi_path: String, repo_path: String) -> Vec<(PathBuf, String)> {
+    let file = File::open(kbi_path).expect("error opening file");
+    let mut parser = jaded::Parser::new(file).expect("error decoding file");
+    let backup_info: java_objects::SavedIncBackupV1 =
+        parser.read_as().expect("error decoding backup info");
+    let (send, recv) = crossbeam::channel::bounded(1024);
+    thread::spawn(move || {
+        traverse_all(
+            &PathBuf::from(repo_path),
+            &backup_info.object_collection2,
+            &send,
+        );
+    });
+    recv.iter().collect()
+}
+
 fn traverse_all(
     root: &PathBuf,
     coll: &ObjectCollection2,
